@@ -1,5 +1,5 @@
 //TTB Aerospace: Alto: Aurora
-///////////////////////////////////////---------------- VERSION FOR HT-5 - 10/8 -----------------------///////////////////////////////////////////////
+///////////////////////////////////////---------------- VERSION FOR HT-5 - 10/15 -----------------------///////////////////////////////////////////////
 #include <Wire.h>
 #include <SPI.h>
 #include <Arduino.h>
@@ -21,11 +21,9 @@ Servo servo2;
 const int ledPinG = 7;
 const int ledPinR = 8;
 const int ledPinB = 9;
-
 const int buzzer = 10;
 const int servo_x = 5;
 const int servo_y = 6;
-float filteredZ = 0;
 
 
 //PID Values
@@ -41,9 +39,11 @@ Adafruit_BNO055 bno(55);
 
 //filter
 ExponentialFilter<long> ADCFilter(10, 0);
+float filteredZ = 0;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void setup() {
   // Start serial connection
   Serial.begin(9600);
@@ -56,17 +56,10 @@ void setup() {
 
   delay(200);
   bno.setExtCrystalUse(true);
-
-  // Set desired PID value to 0 degrees
-  desired = 0;
-
-
+  
   // Define servo data pins (PWM enabled)
   servo1.attach(5);
   servo2.attach(6);
-
-
-  // Set both servos to 90 degrees
   servo1.write(initialServoValue1);
   servo2.write(initialServoValue2);
 
@@ -74,6 +67,7 @@ void setup() {
   // Initialize PID
   pid.SetMode(AUTOMATIC);
   pid.SetSampleTime(10);
+  desired = 0;
 
 
   //buzzer stuff
@@ -98,16 +92,16 @@ void setup() {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void loop() {
+  //Set LED pin High
   digitalWrite(ledPinB, HIGH);
 
-  
-  //get data
-  imu::Vector<3> li_ac = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+  //get BNO055 data
+  bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER);
   sensors_event_t event;
   bno.getEvent(&event);
 
   // Get current degrees for Z axis
-  double degreeZ = event.orientation.z;
+  double degreeZ = eulerZ;
   input = abs(degreeZ);
   pid.Compute();
 
@@ -124,7 +118,7 @@ void loop() {
   filteredZ = ADCFilter.Current();
   Serial.print(RawValue);
   Serial.print(",");
-  Serial.print(event.orientation.z);
+  Serial.print(degreeZ);
   Serial.print(",");
   Serial.println(filteredZ);
   

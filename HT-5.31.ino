@@ -10,14 +10,14 @@
 #include "MegunoLink.h"
 #include "Filter.h"
 
-// Set servo start value 90 degrees
+// Set servo start value
 const int initialServoValue1 = 60 ;
 const int initialServoValue2 = 120 ;
 Servo servo1;
 Servo servo2;
 
 
-//pinouts for DARWIN Z
+//pinouts for Aurora R1
 const int ledPinG = 7;
 const int ledPinR = 8;
 const int ledPinB = 9;
@@ -56,7 +56,7 @@ void setup() {
 
   delay(200);
   bno.setExtCrystalUse(true);
-  
+
   // Define servo data pins (PWM enabled)
   servo1.attach(5);
   servo2.attach(6);
@@ -113,19 +113,18 @@ void loop() {
     newZ = degreeZ - output;
   }
 
+  //Apply filter
   int RawValue = newZ;
   ADCFilter.Filter(RawValue);
   filteredZ = ADCFilter.Current();
+
+  //print different values to the monitor
   Serial.print(RawValue);
   Serial.print(",");
   Serial.print(degreeZ);
   Serial.print(",");
   Serial.println(filteredZ);
-  
 
   servo1.write((filteredZ * -.65 ) + (  initialServoValue1));; // Add initialServoValue to make sure Servo is between 0 and 180
-
-
-
 
 }

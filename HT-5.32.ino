@@ -16,15 +16,13 @@ const int initialServoValue2 = 120 ;
 Servo servo1;
 Servo servo2;
 
-
 //pinouts for Aurora R1
+const int servo_x = 5;
+const int servo_y = 6;
 const int ledPinG = 7;
 const int ledPinR = 8;
 const int ledPinB = 9;
 const int buzzer = 10;
-const int servo_x = 5;
-const int servo_y = 6;
-
 
 //PID Values
 double desired, input, output;
@@ -32,7 +30,6 @@ double kp = .1;
 double ki = .05;
 double kd = .2;
 PID pid(&input, &output, &desired, kp, ki, kd, DIRECT);
-
 
 //gyro
 Adafruit_BNO055 bno(55);
@@ -63,12 +60,10 @@ void setup() {
   servo1.write(initialServoValue1);
   servo2.write(initialServoValue2);
 
-
   // Initialize PID
   pid.SetMode(AUTOMATIC);
   pid.SetSampleTime(10);
   desired = 0;
-
 
   //buzzer stuff
   pinMode(buzzer, OUTPUT); // Set buzzer
@@ -87,7 +82,6 @@ void setup() {
   delay(500);
 }
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -100,7 +94,7 @@ void loop() {
   sensors_event_t event;
   bno.getEvent(&event);
 
-  // Get current degrees for Z axis
+  //Run PID loop
   double degreeZ = eulerZ;
   input = abs(degreeZ);
   pid.Compute();
@@ -125,6 +119,7 @@ void loop() {
   Serial.print(",");
   Serial.println(filteredZ);
 
+  //Write to servo motor
   servo1.write((filteredZ * -.65 ) + (  initialServoValue1));; // Add initialServoValue to make sure Servo is between 0 and 180
 
 }

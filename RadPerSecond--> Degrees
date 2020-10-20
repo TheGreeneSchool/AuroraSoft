@@ -1,0 +1,42 @@
+double GyroAngleX, GyroAngleY, GyroAngleZ, GyroRawX, GyroRawY, GyroRawZ;
+double dt, currentTime, previousTime;
+
+
+
+void setup() {
+  
+}
+
+void loop() {
+
+  //READ GYRO  
+  currentTime = millis();            
+  dt = (currentTime - previousTime) / 1000;
+  getRawAngle();
+  previousTime = currentTime;  
+  
+}
+
+
+
+
+
+void getRawAngle(){
+    //Change Variable so its easier to refrence later on
+  GyroRawX = (//YOUR GYRO X);
+  GyroRawY = (//YOUR GYRO Y);
+  GyroRawZ = (//YOUR GYRO Z);
+  //Integrate over time to get Local Orientation
+  GyroAngleX += (GyroRawX * dt)*(180/PI);
+  GyroAngleY += (GyroRawY * dt)*(180/PI);
+  GyroAngleZ += (GyroRawZ * dt)*(180/PI);
+  Serial.print(90);
+  Serial.print(",");
+  Serial.print(-90);
+  Serial.print(",");
+  Serial.print(GyroAngleZ);
+  Serial.print(",");  
+  Serial.print(GyroAngleY);
+  Serial.print(",");
+  Serial.println(GyroAngleX);
+}

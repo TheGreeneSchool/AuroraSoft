@@ -1,5 +1,5 @@
-//TTB Aerospace: Alto: Aurora
-///////////////////////////////////////---------------- VERSION FOR HT-5 - 10/15 -----------------------///////////////////////////////////////////////
+//TTB Aerospace: Alto: Aurora ------ VERSION 5.5
+///////////////////////////////////////---------------- VERSION FOR HT-5 - 11/4 -----------------------///////////////////////////////////////////////
 #include <Wire.h>
 #include <SPI.h>
 #include <Arduino.h>
@@ -13,6 +13,7 @@
 // Set servo start value
 const int initialServoValue1 = 60 ;
 const int initialServoValue2 = 120 ;
+const float scaledServoGain = .65 ;
 Servo servo1;
 Servo servo2;
 
@@ -90,12 +91,10 @@ void loop() {
   digitalWrite(ledPinB, HIGH);
 
   //get BNO055 data
-  bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER);
-  sensors_event_t event;
-  bno.getEvent(&event);
-
+  imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
+  
   //Run PID loop
-  double degreeZ = eulerZ;
+  double degreeZ = euler.z();
   input = abs(degreeZ);
   pid.Compute();
 
@@ -108,7 +107,7 @@ void loop() {
   }
 
   //Apply filter
-  int RawValue = newZ;
+  double RawValue = newZ;
   ADCFilter.Filter(RawValue);
   filteredZ = ADCFilter.Current();
 
@@ -120,6 +119,6 @@ void loop() {
   Serial.println(filteredZ);
 
   //Write to servo motor
-  servo1.write((filteredZ * -.65 ) + (  initialServoValue1));; // Add initialServoValue to make sure Servo is between 0 and 180
+  servo1.write((filteredZ * -(scaledServoGain) ) + (  initialServoValue1));; // Add initialServoValue to make sure Servo is between 0 and 180
 
 }

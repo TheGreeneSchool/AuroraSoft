@@ -1,4 +1,4 @@
-//TTB Aerospace: Alto: Aurora ------ VERSION 5.5
+//TTB Aerospace: Alto: Aurora ------ VERSION 5.51
 ///////////////////////////////////////---------------- VERSION FOR HT-5 - 11/4 -----------------------///////////////////////////////////////////////
 #include <Wire.h>
 #include <SPI.h>
@@ -27,7 +27,7 @@ const int buzzer = 10;
 
 //PID Values
 double desired, input, output;
-double kp = .1;
+double kp = .2;
 double ki = .05;
 double kd = .2;
 PID pid(&input, &output, &desired, kp, ki, kd, DIRECT);

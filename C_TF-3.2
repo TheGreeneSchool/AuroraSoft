@@ -1,49 +1,51 @@
-//TTB Aerospace: Alto: AuroraR1
-
-#include <SPI.h>
+//TTB Aerospace: Alto: Aurora ------ VERSION 3.2 TF
+///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/4 -----------------------//////////
 #include <Wire.h>
-#include <SD.h>
+#include <SPI.h>
 #include <Arduino.h>
 #include <Servo.h>
 #include <PID_v1.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
+#include "MegunoLink.h"
+#include "Filter.h"
+#include <SD.h>
+Adafruit_BNO055 bno(55);
 
 //sd card
 File myFile;
 
-// Set servo start value
-const int initialServoValue1 = 105 ;
-const int initialServoValue2 = 85 ;
+//loop State variables
+int state = 0 ;
+int times = 0;
+int threshold = 1;
 
-// Declare servos
+// Set servo start value
+const int initialServoValue1 = 60 ;
+const int initialServoValue2 = 130 ;
+const float scaledServoGain = .65 ;
 Servo servo1;
 Servo servo2;
 
-////////////////////////
-int threshold = 12;
-
 //pinouts for Aurora R1
-
+const int servo_x = 5;
+const int servo_y = 6;
 const int ledPinG = 7;
 const int ledPinR = 8;
 const int ledPinB = 9;
-
 const int buzzer = 10;
-const int servo_x = 5;
-const int servo_y = 6;
 const int pyro1 = 11;
 
+
+
 //PID Values
-
-
 double desired, input, output;
-double kp = 0.075;
+double kp = 0.2;
 double ki = 0.05;
 double kd = 0.1;
 //////////////////////////////
 double desired2, input2, output2;
-double kp2 = 0.075;
+double kp2 = 0.2;
 double ki2 = 0.05;
 double kd2 = 0.1;
 /////////////////////////////
@@ -51,11 +53,15 @@ PID pid(&input, &output, &desired, kp, ki, kd, DIRECT);
 PID pid2(&input2, &output2, &desired2, kp2, ki2, kd2, DIRECT);
 
 
-Adafruit_BNO055 bno(55);
+//filter
+ExponentialFilter<long> ADCFilter(10, 0);
+float filteredZ = 0;
+//filter2
+ExponentialFilter<long> ADCFilterY(10, 0);
+float filteredY = 0;
 
 
 void setup() {
-  // Start serial connection
   Serial.begin(9600);
 
 
@@ -65,18 +71,12 @@ void setup() {
     while (1);
   }
   Serial.println("initialization done.");
-  // open the file. note that only one file can be open at a time,
-  // so you have to close this one before opening another.
   myFile = SD.open("test.csv", FILE_WRITE);
-  // if the file opened okay, write to it:
+
   if (myFile) {
-
-
-    myFile.println("time,z,y,updown, servo_z, servo_y");
-
+    myFile.println("time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, filteredServoY, filteredServoZ");
   }
 
-  // Trap application into endless loop, if gyro sensor fails
   if (!bno.begin()) {
     Serial.println("Error initializing gyro sensor.\nPlease check connection!");
     while (1);
@@ -85,33 +85,28 @@ void setup() {
   delay(200);
   bno.setExtCrystalUse(true);
 
-  // Set desired PID value to 0 degrees
-  desired = 0;
-  desired2 = 0;
 
-
-  // Define servo data pins (PWM enabled)
+  // Servo
   servo1.attach(5);
   servo2.attach(6);
-
-  // Set both servos to 90 degrees
   servo1.write(initialServoValue1);
   servo2.write(initialServoValue2);
 
   // Initialize PID
   pid.SetMode(AUTOMATIC);
   pid2.SetMode(AUTOMATIC);
+  desired = 0;
+  desired2 = 0;
 
-  pinMode(buzzer, OUTPUT); // Set buzzer -
+  pinMode(buzzer, OUTPUT);
   pinMode(pyro1, OUTPUT);
+
 
   tone(buzzer, 200, 200);
   delay(300);
   tone(buzzer, 800, 200);
   delay(300);
   tone(buzzer, 500, 200);
-
-
   digitalWrite(ledPinG, HIGH);   // turn the LED on (HIGH is the voltage level)
   delay(300);                       // wait for a second
   digitalWrite(ledPinG, LOW);    // turn the LED off by making the voltage LOW
@@ -122,8 +117,6 @@ void setup() {
   delay(500);
 }
 
-int state = 0 ;
-int times = 0;
 
 void loop() {
   // Read gyro sensor data
@@ -132,101 +125,94 @@ void loop() {
     digitalWrite(ledPinR, HIGH);   // turn the LED on (HIGH is the voltage level)
     if (li_ac.z() > threshold ) {
       Serial.print(li_ac.z());
-
       state++ ;
     }
 
   }
 
-
-
   if (state == 1) {
-    imu::Vector<3> li_ac = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
-    imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
+    //LED
     digitalWrite(ledPinR, LOW);   // turn the LED on (HIGH is the voltage level)
     digitalWrite(ledPinB, HIGH);   // turn the LED on (HIGH is the voltage level)
 
+    //IMU DATA
+    imu::Vector<3> li_ac = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+    imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
 
-    // Get current degrees for Z axis
-    int degreeZ = euler.z();
-    input = abs(degreeZ);               // Calculate to absolute degrees
-    pid.Compute();                      // Get correction value for Z axis
+    /////////////////////////////////////////////////////////////////////////////////////////////////FIRST
+    /////////////////////////////////////////////////////////////////////////////////////////////////FIRST
+    // Run PID loopZ
+    double degreeZ = euler.z();
+    input = abs(degreeZ);
+    pid.Compute();
 
     // Apply correction value for Z axis
-    int newZ;
+    double newZ;
     if (degreeZ < 0) {
-      newZ = degreeZ + output;          // If gyro was moved counter clock-wise, add correction value
+      newZ = degreeZ + output;
     } else {
-      newZ = degreeZ - output;          // If gyro was moved clock-wise, subtract correction value
+      newZ = degreeZ - output;
     }
 
-    // Limit servo to min 0, or max 180 degrees
-    if (newZ < -90) {
-      newZ = -90;
-    } else if (newZ > 90) {
-      newZ = 90;
-    }
-    servo1.write((newZ * -1 ) + (  initialServoValue1));; // Add initialServoValue to make sure Servo is between 0 and 180
+    //Apply filter
+    double RawValue = newZ;
+    ADCFilter.Filter(RawValue);
+    filteredZ = ADCFilter.Current();
 
-    // Communication functions to PID Frontend
 
     /////////////////////////////////////////////////////////////////////////////////////////////////second axis
-
-
-
-
-    // Get current degrees for Z axis
-    int degreeY = euler.y();
-    input2 = abs(degreeY);               // Calculate to absolute degrees
-    pid2.Compute();                      // Get correction value for Z axis
+    /////////////////////////////////////////////////////////////////////////////////////////////////second axis
+    // Run PID loopY
+    double degreeY = euler.y();
+    input2 = abs(degreeY);
+    pid2.Compute();
 
     // Apply correction value for Z axis
-    int newY;
+    double newY;
     if (degreeY < 0) {
-      newY = degreeY + output2;          // If gyro was moved counter clock-wise, add correction value
+      newY = degreeY + output2;
     } else {
-      newY = degreeY - output2;          // If gyro was moved clock-wise, subtract correction value
+      newY = degreeY - output2;
     }
 
-    // Limit servo to min 0, or max 180 degrees
-    if (newY < -90) {
-      newY = -90;
-    } else if (newY > 90) {
-      newY = 90;
-    }
-    servo2.write((newY * -1 ) + (  initialServoValue2));; // Add initialServoValue to make sure Servo is between 0 and 180
+    //Apply filter
+    double RawValueY = newY;
+    ADCFilterY.Filter(RawValueY);
+    filteredY = ADCFilterY.Current();
 
-    // Communication functions to PID Frontend
-    // for tuning PID values and reading out current PID calculations
+    /////////////////////////////////////////////////////////////////////////////////////////////////SERVO
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    servo1.write((filteredZ * -(scaledServoGain) ) + (  initialServoValue1));;
+    servo2.write((filteredY * -(scaledServoGain) ) + (  initialServoValue2));;
 
-
-
-    times++;
-    Serial.print((newY * -1 ) + (  initialServoValue2));
-    Serial.print(",");
-    Serial.println((newZ * -1 ) + (  initialServoValue1));
-
-    //datalogging
+    /////////////////////////////////////////////////////////////////////////////////////////////////DATA AND STATE
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //datalogging - time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, filteredServoY, filteredServoZ
     myFile.print(times);
+    myFile.print(",");
+    myFile.print(li_ac.z());
     myFile.print(",");
     myFile.print(degreeY);
     myFile.print(",");
     myFile.print(degreeZ);
     myFile.print(",");
-    myFile.print(li_ac.z());
-    myFile.print(",");
     myFile.print(newY);
     myFile.print(",");
-    myFile.println(newZ);
+    myFile.print(newZ);
+    myFile.print(",");
+    myFile.print(filteredY);
+    myFile.print(",");
+    myFile.println(filteredZ);
+    times++;
 
+    Serial.print((newY * -1 ) + (  initialServoValue2));
+    Serial.print(",");
+    Serial.println((newZ * -1 ) + (  initialServoValue1));
 
-    if (li_ac.z() < -.5 ) {
-
+    if (li_ac.z() < -50 ) {
       state++;
     }
-
   }
-
 
   if (state == 2) {
     digitalWrite(ledPinB, LOW);   // turn the LED on (HIGH is the voltage level)

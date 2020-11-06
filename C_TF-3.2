@@ -1,5 +1,5 @@
-//TTB Aerospace: Alto: Aurora ------ VERSION 3.2 TF
-///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/4 -----------------------//////////
+//TTB Aerospace: Alto: Aurora ------ VERSION 3.31 TF
+///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/5 -----------------------//////////
 #include <Wire.h>
 #include <SPI.h>
 #include <Arduino.h>
@@ -18,10 +18,10 @@ File myFile;
 //loop State variables
 int state = 0 ;
 int times = 0;
-int threshold = 1;
+int threshold = 12;
 
 // Set servo start value
-const int initialServoValue1 = 60 ;
+const int initialServoValue1 = 65 ;
 const int initialServoValue2 = 130 ;
 const float scaledServoGain = .65 ;
 Servo servo1;
@@ -42,12 +42,12 @@ const int pyro1 = 11;
 double desired, input, output;
 double kp = 0.2;
 double ki = 0.05;
-double kd = 0.1;
+double kd = 0.2;
 //////////////////////////////
 double desired2, input2, output2;
 double kp2 = 0.2;
 double ki2 = 0.05;
-double kd2 = 0.1;
+double kd2 = 0.2;
 /////////////////////////////
 PID pid(&input, &output, &desired, kp, ki, kd, DIRECT);
 PID pid2(&input2, &output2, &desired2, kp2, ki2, kd2, DIRECT);
@@ -95,6 +95,9 @@ void setup() {
   // Initialize PID
   pid.SetMode(AUTOMATIC);
   pid2.SetMode(AUTOMATIC);
+  pid.SetSampleTime(10);
+  pid2.SetSampleTime(10);
+
   desired = 0;
   desired2 = 0;
 
@@ -205,11 +208,7 @@ void loop() {
     myFile.println(filteredZ);
     times++;
 
-    Serial.print((newY * -1 ) + (  initialServoValue2));
-    Serial.print(",");
-    Serial.println((newZ * -1 ) + (  initialServoValue1));
-
-    if (li_ac.z() < -50 ) {
+    if (li_ac.z() < -2 ) {
       state++;
     }
   }

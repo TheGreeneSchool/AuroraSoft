@@ -1,5 +1,5 @@
-//TTB Aerospace: Alto: Aurora ------ VERSION 3.31 TF
-///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/5 -----------------------//////////
+//TTB Aerospace: Alto: Aurora ------ VERSION 3.32 TF
+///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/11 -----------------------//////////
 #include <Wire.h>
 #include <SPI.h>
 #include <Arduino.h>
@@ -121,7 +121,7 @@ void setup() {
   myFile = SD.open("test.csv", FILE_WRITE);
 
   if (myFile) {
-    myFile.println("time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, filteredServoY, filteredServoZ");
+    myFile.println("time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, filteredPidY, filteredPidZ");
   }
 
   if (!bno.begin()) {
@@ -201,7 +201,7 @@ void loop() {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////DATA AND STATE
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    //datalogging - time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, filteredServoY, filteredServoZ
+    //datalogging - time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, filteredPIdY, filteredPidZ
     myFile.print(times);
     myFile.print(",");
     myFile.print(li_ac.z());

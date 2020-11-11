@@ -55,33 +55,14 @@ PID pid2(&input2, &output2, &desired2, kp2, ki2, kd2, DIRECT);
 
 //filter
 ExponentialFilter<long> ADCFilter(10, 0);
-float filteredZ = 0;
+double filteredZ = 0;
 //filter2
 ExponentialFilter<long> ADCFilterY(10, 0);
-float filteredY = 0;
+double filteredY = 0;
 
 
 void setup() {
   Serial.begin(9600);
-
-
-  Serial.print("Initializing SD card...");
-  if (!SD.begin(4)) {
-    Serial.println("initialization failed!");
-    while (1);
-  }
-  Serial.println("initialization done.");
-  myFile = SD.open("test.csv", FILE_WRITE);
-
-  if (myFile) {
-    myFile.println("time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, filteredServoY, filteredServoZ");
-  }
-
-  if (!bno.begin()) {
-    Serial.println("Error initializing gyro sensor.\nPlease check connection!");
-    while (1);
-  }
-
   delay(200);
   bno.setExtCrystalUse(true);
 
@@ -118,6 +99,36 @@ void setup() {
   delay(300);                       // wait for a second
   digitalWrite(ledPinG, LOW);    // turn the LED off by making the voltage LOW
   delay(500);
+
+
+  Serial.print("Initializing SD card...");
+  if (!SD.begin(4)) {
+    Serial.println("initialization failed!");
+    digitalWrite(ledPinR, HIGH); 
+    tone(buzzer, 200, 200);
+    delay(300);
+    tone(buzzer, 200, 200);
+    delay(300);
+    tone(buzzer, 200, 200);
+    delay(300);
+    tone(buzzer, 200, 200);
+    delay(300);
+    while (1);
+  }
+
+  Serial.println("initialization done.");
+  SD.remove("test.csv");
+  myFile = SD.open("test.csv", FILE_WRITE);
+
+  if (myFile) {
+    myFile.println("time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, filteredServoY, filteredServoZ");
+  }
+
+  if (!bno.begin()) {
+    Serial.println("Error initializing gyro sensor.\nPlease check connection!");
+    while (1);
+  }
+
 }
 
 
@@ -208,7 +219,7 @@ void loop() {
     myFile.println(filteredZ);
     times++;
 
-    if (li_ac.z() < -2 ) {
+    if (li_ac.z() < -3 ) {
       state++;
     }
   }

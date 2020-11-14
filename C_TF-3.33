@@ -1,5 +1,5 @@
-//TTB Aerospace: Alto: Aurora ------ VERSION 3.32 TF
-///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/11 -----------------------//////////
+//TTB Aerospace: Alto: Aurora ------ VERSION 3.33 TF
+///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/13 -----------------------//////////
 #include <Wire.h>
 #include <SPI.h>
 #include <Arduino.h>
@@ -21,8 +21,8 @@ int times = 0;
 int threshold = 12;
 
 // Set servo start value
-const int initialServoValue1 = 65 ;
-const int initialServoValue2 = 130 ;
+const int initialServoValue1 = 70 ;
+const int initialServoValue2 = 120 ;
 const float scaledServoGain = .65 ;
 Servo servo1;
 Servo servo2;
@@ -196,8 +196,9 @@ void loop() {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////SERVO
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    servo1.write((filteredZ * -(scaledServoGain) ) + (  initialServoValue1));;
     servo2.write((filteredY * -(scaledServoGain) ) + (  initialServoValue2));;
+    servo1.write((filteredZ * -(scaledServoGain) ) + (  initialServoValue1));;
+    
 
     /////////////////////////////////////////////////////////////////////////////////////////////////DATA AND STATE
     /////////////////////////////////////////////////////////////////////////////////////////////////

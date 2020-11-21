@@ -1,5 +1,5 @@
-//TTB Aerospace: Alto: Aurora ------ VERSION 3.34 TF
-///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/17 -----------------------//////////
+//TTB Aerospace: Alto: Aurora ------ VERSION 3.35 TF
+///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/19 -----------------------//////////
 #include <Wire.h>
 #include <SPI.h>
 #include <Arduino.h>
@@ -18,12 +18,12 @@ File myFile;
 //loop State variables
 int state = 0 ;
 int times = 0;
-int threshold = 12;
+int threshold = 11;
 
 // Set servo start value
 const int initialServoValue1 = 65 ;
 const int initialServoValue2 = 124 ;
-const float scaledServoGain = .4 ;
+const float scaledServoGain = .6 ;
 Servo servo1;
 Servo servo2;
 
@@ -40,12 +40,12 @@ const int pyro1 = 11;
 
 //PID Values
 double desired, input, output;
-double kp = 0.2;
+double kp = 0.4;
 double ki = 0.05;
 double kd = 0.2;
 //////////////////////////////
 double desired2, input2, output2;
-double kp2 = 0.2;
+double kp2 = 0.4;
 double ki2 = 0.05;
 double kd2 = 0.2;
 /////////////////////////////
@@ -76,8 +76,8 @@ void setup() {
   // Initialize PID
   pid.SetMode(AUTOMATIC);
   pid2.SetMode(AUTOMATIC);
-  pid.SetSampleTime(10);
-  pid2.SetSampleTime(10);
+  pid.SetSampleTime(5);
+  pid2.SetSampleTime(5);
 
   desired = 0;
   desired2 = 0;
@@ -104,7 +104,7 @@ void setup() {
   Serial.print("Initializing SD card...");
   if (!SD.begin(4)) {
     Serial.println("initialization failed!");
-    digitalWrite(ledPinR, HIGH); 
+    digitalWrite(ledPinR, HIGH);
     tone(buzzer, 200, 200);
     delay(300);
     tone(buzzer, 200, 200);
@@ -121,7 +121,7 @@ void setup() {
   myFile = SD.open("test.csv", FILE_WRITE);
 
   if (myFile) {
-    myFile.println("time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, filteredPidY, filteredPidZ");
+    myFile.println("time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, filteredPidY, filteredPidZ, servoOutY, servoOutZ");
   }
 
   if (!bno.begin()) {
@@ -198,11 +198,10 @@ void loop() {
     /////////////////////////////////////////////////////////////////////////////////////////////////
     servo2.write((filteredY * -(scaledServoGain) ) + (  initialServoValue2));;
     servo1.write((filteredZ * -(scaledServoGain) ) + (  initialServoValue1));;
-    
 
     /////////////////////////////////////////////////////////////////////////////////////////////////DATA AND STATE
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    //datalogging - time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, filteredPIdY, filteredPidZ
+    //datalogging - time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, filteredPIdY, filteredPidZ, servoOutY, servoOutZ
     myFile.print(times);
     myFile.print(",");
     myFile.print(li_ac.z());
@@ -217,10 +216,14 @@ void loop() {
     myFile.print(",");
     myFile.print(filteredY);
     myFile.print(",");
-    myFile.println(filteredZ);
+    myFile.print(filteredZ);
+    myFile.print(",");
+    myFile.print((-1)*(servo2.read()-initialServoValue2));
+    myFile.print(",");
+    myFile.println((-1)*(servo1.read()- initialServoValue1));
     times++;
 
-    if (li_ac.z() < -3 ) {
+    if (li_ac.z() < -5 ) {
       state++;
     }
   }

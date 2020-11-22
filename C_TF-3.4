@@ -1,5 +1,5 @@
-//TTB Aerospace: Alto: Aurora ------ VERSION 3.35 TF
-///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/19 -----------------------//////////
+//TTB Aerospace: Alto: Aurora ------ VERSION 3.4 TF
+///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/22 -----------------------//////////
 #include <Wire.h>
 #include <SPI.h>
 #include <Arduino.h>
@@ -21,11 +21,11 @@ int times = 0;
 int threshold = 11;
 
 // Set servo start value
-const int initialServoValue1 = 65 ;
-const int initialServoValue2 = 124 ;
+const int initialServoValueY = 65 ;
+const int initialServoValueZ = 124 ;
 const float scaledServoGain = .6 ;
-Servo servo1;
-Servo servo2;
+Servo servoY;
+Servo servoZ;
 
 //pinouts for Aurora R1
 const int servo_x = 5;
@@ -68,10 +68,10 @@ void setup() {
 
 
   // Servo
-  servo1.attach(5);
-  servo2.attach(6);
-  servo1.write(initialServoValue1);
-  servo2.write(initialServoValue2);
+  servoY.attach(5);
+  servoZ.attach(6);
+  servoY.write(initialServoValueY);
+  servoZ.write(initialServoValueZ);
 
   // Initialize PID
   pid.SetMode(AUTOMATIC);
@@ -196,8 +196,8 @@ void loop() {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////SERVO
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    servo2.write((filteredY * -(scaledServoGain) ) + (  initialServoValue2));;
-    servo1.write((filteredZ * -(scaledServoGain) ) + (  initialServoValue1));;
+    servoZ.write((filteredY * -(scaledServoGain) ) + (  initialServoValueZ));;
+    servoY.write((filteredZ * -(scaledServoGain) ) + (  initialServoValueY));;
 
     /////////////////////////////////////////////////////////////////////////////////////////////////DATA AND STATE
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -218,9 +218,9 @@ void loop() {
     myFile.print(",");
     myFile.print(filteredZ);
     myFile.print(",");
-    myFile.print((-1)*(servo2.read()-initialServoValue2));
+    myFile.print((-1)*(servoZ.read()-initialServoValueZ));
     myFile.print(",");
-    myFile.println((-1)*(servo1.read()- initialServoValue1));
+    myFile.println((-1)*(servoY.read()- initialServoValueY));
     times++;
 
     if (li_ac.z() < -5 ) {

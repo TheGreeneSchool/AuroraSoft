@@ -18,12 +18,11 @@ File myFile;
 //loop State variables
 int state = 0 ;
 int threshold = 11;
-float baseAlt;
+//float baseAlt;
 
 // Set servo start value
 const int servoY_offset = 65;
 const int servoZ_offset = 124;
-const float scaledServoGain = .6 ;
 Servo servoY;
 Servo servoZ;
 
@@ -38,19 +37,14 @@ int desired_angleY = 0;//servoX
 float pidZ_p = 0;
 float pidY_p = 0;
 
-//"I" Constants
-float pidY_i = 0;
-float pidZ_i = 0;
-
 //"D" Constants
 float pidZ_d = 0;
 float pidY_d = 0;
 
 
 //PID Gains
-double kp = .6;
-double ki = 0;
-double kd = 0.5;
+double kp = .1;
+double kd = .05;
 
 double dt, currentTime, previousTime;
 
@@ -173,14 +167,9 @@ void loop() {
     //Defining "D"
     pidZ_d = kd * ((errorZ - previous_errorZ) / dt);
     pidY_d = kd * ((errorY - previous_errorY) / dt);
-
-    //Defining "I"
-    pidZ_i = ki * (pidZ_i + errorZ * dt);
-    pidY_i = ki * (pidY_i + errorY * dt);
-
     //Adding it all up
-    PIDZ = -1 * (pidZ_p + pidZ_i + pidZ_d);
-    PIDY = -1 * (pidY_p + pidY_i + pidY_d);
+    PIDZ = -1 * (pidZ_p + pidZ_d);
+    PIDY = -1 * (pidY_p + pidY_d);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////SERVO
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -204,9 +193,12 @@ void loop() {
     myFile.print(",");
     myFile.print(PIDZ * -1);
     myFile.print(",");
-    myFile.print((-1) * (servoZ.read() - servoZ_offset));
+    myFile.print((-1) * (servoY.read() - servoY_offset));
     myFile.print(",");
-    myFile.println((-1) * (servoY.read() - servoY_offset));
+    myFile.println((-1) * (servoZ.read() - servoZ_offset));
+
+
+    previousTime = currentTime;  
 
 
     if (li_ac.z() < -5 ) {

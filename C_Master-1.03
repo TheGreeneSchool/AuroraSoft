@@ -1,5 +1,20 @@
-//TTB Aerospace: Alto: Aurora ------ Cole-PID Test 1.01
-///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/22 -----------------------//////////
+/*Alto: Aurora ------ Master test 1.03 -- Teddy Duncker: TTB Aerospace, With Code from: Cole Purtzer: Delta Space Systems
+
+Known issues:
+- Adding in BMP reading through adafruit lib exceeds arduino mem
+- Would like to remove the servo "gear ratio" value and ONLY control rocket w/ PID
+- Arduino Euler angle lib WONT work for highher flights - Switch to quats from camerons BNO055 lib 
+- Would like to have a way to more cleanly switch states
+
+
+States: 
+- Startup --> Startup Function
+- PadIdle --> Waiting for launch
+- Powered --> Flight
+- freefall --> deploy chutes, close data
+- Program terminated --> continuously spam "program terminated" and wait for shutoff
+
+///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/22 -----------------------//////////*/
 #include <Wire.h>
 #include <Arduino.h>
 #include <Servo.h>
@@ -23,7 +38,7 @@ int threshold = 11;
 //float baseAlt;
 
 // Set servo start value
-const int servoY_offset = 65;
+const int servoY_offset = 68;
 const int servoZ_offset = 124;
 Servo servoY;
 Servo servoZ;
@@ -64,6 +79,9 @@ const int ledPinR = 8;
 const int ledPinB = 9;
 const int buzzer = 10;
 const int pyro1 = 11;
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
   Serial.begin(9600);
@@ -84,13 +102,13 @@ void setup() {
   tone(buzzer, 800, 200);
   delay(300);
   tone(buzzer, 500, 200);
-  digitalWrite(ledPinG, HIGH); // turn the LED on (HIGH is the voltage level)
-  delay(300); // wait for a second
-  digitalWrite(ledPinG, LOW); // turn the LED off by making the voltage LOW
+  digitalWrite(ledPinG, HIGH); 
+  delay(300); /
+  digitalWrite(ledPinG, LOW); 
   delay(500);
-  digitalWrite(ledPinG, HIGH); // turn the LED on (HIGH is the voltage level)
-  delay(300); // wait for a second
-  digitalWrite(ledPinG, LOW); // turn the LED off by making the voltage LOW
+  digitalWrite(ledPinG, HIGH); 
+  delay(300); 
+  digitalWrite(ledPinG, LOW); 
   delay(500);
 
   if (!SD.begin(4)) {
@@ -106,7 +124,7 @@ void setup() {
   myFile = SD.open("flight.csv", FILE_WRITE);
 
   if (myFile) {
-    myFile.println("time,flighttime(dt), verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, servoOutY, servoOutZ");
+    myFile.println("time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, servoOutY, servoOutZ");
   }
 
   if (!bno.begin()) {
@@ -122,11 +140,14 @@ void setup() {
   */
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void loop() {
-  // Read gyro sensor data
   if (state == 0) {
     imu::Vector < 3 > li_ac = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
-    digitalWrite(ledPinR, HIGH); // turn the LED on (HIGH is the voltage level)
+    digitalWrite(ledPinR, HIGH); 
     if (li_ac.z() > threshold) {
       Serial.print(li_ac.z());
       state++;
@@ -141,8 +162,8 @@ void loop() {
     dt = (currentTime - previousTime) / 1000;
 
     //LED
-    digitalWrite(ledPinR, LOW); // turn the LED on (HIGH is the voltage level)
-    digitalWrite(ledPinB, HIGH); // turn the LED on (HIGH is the voltage level)
+    digitalWrite(ledPinR, LOW); 
+    digitalWrite(ledPinB, HIGH); 
 
     //IMU DATA
     imu::Vector < 3 > li_ac = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
@@ -180,17 +201,22 @@ void loop() {
     ADCFilterY.Filter(RawValueY);
     filteredY = ADCFilterY.Current();
 
+
+    //pwm
+    double pwmY = (filteredY / 2) + servoY_offset;
+    double pwmZ = (filteredZ / 2) + servoZ_offset;
+    double cPwmY = constrain(pwmY, servoY_offset -15, servoY_offset +15);
+    double cPwmZ = constrain(pwmZ, servoZ_offset -15, servoZ_offset +15);
+
     /////////////////////////////////////////////////////////////////////////////////////////////////SERVO
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    servoY.write((filteredY / 2) + servoY_offset);
-    servoZ.write((filteredZ / 2) + servoZ_offset);
+    servoY.write(cPwmY);
+    servoZ.write(cPwmZ);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////DATA AND STATE
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    //datalogging - time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, filteredPIdY, filteredPidZ, servoOutY, servoOutZ
+    //datalogging
     myFile.print(currentTime);
-    myFile.print(",");
-    myFile.print(dt);
     myFile.print(",");
     //myFile.print((bmp.readAltitude(SEALEVELPRESSURE_HPA) * 3.281) - baseAlt);
     //myFile.print(",");
@@ -208,6 +234,7 @@ void loop() {
     myFile.print(",");
     myFile.println((-1) * (servoZ.read() - servoZ_offset));
 
+    //timing
     previousTime = currentTime;
 
     if (li_ac.z() < -5) {
@@ -216,8 +243,9 @@ void loop() {
   }
 
   if (state == 2) {
-    digitalWrite(ledPinB, LOW); // turn the LED on (HIGH is the voltage level)
+    digitalWrite(ledPinB, LOW); 
     digitalWrite(ledPinG, HIGH);
+    //add in pyros if going for a chute deployment
     myFile.close();
     state++;
   }

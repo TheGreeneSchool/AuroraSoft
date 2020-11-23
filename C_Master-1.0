@@ -1,4 +1,4 @@
-//TTB Aerospace: Alto: Aurora ------ Cole-PID Test 
+//TTB Aerospace: Alto: Aurora ------ Cole-PID Test
 ///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/22 -----------------------//////////
 #include <Wire.h>
 #include <Arduino.h>
@@ -6,7 +6,9 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <SD.h>
-//#include "Adafruit_BMP3XX.h"
+#include "MegunoLink.h"
+#include "Filter.h"
+ //#include "Adafruit_BMP3XX.h"
 //#define SEALEVELPRESSURE_HPA (1013.25)
 
 //Adafruit_BMP3XX bmp; // I2C
@@ -16,7 +18,7 @@ Adafruit_BNO055 bno(55);
 File myFile;
 
 //loop State variables
-int state = 0 ;
+int state = 0;
 int threshold = 11;
 //float baseAlt;
 
@@ -30,8 +32,8 @@ Servo servoZ;
 double PIDZ, PIDY, errorZ, errorY, previous_errorZ, previous_errorY;
 
 //Upright Angle of the Gyroscope
-int desired_angleZ = 0;//servoY
-int desired_angleY = 0;//servoX
+int desired_angleZ = 0; //servoY
+int desired_angleY = 0; //servoX
 
 //"P" Constants
 float pidZ_p = 0;
@@ -41,14 +43,18 @@ float pidY_p = 0;
 float pidZ_d = 0;
 float pidY_d = 0;
 
-
 //PID Gains
-double kp = .1;
-double kd = .05;
+double kp = .9;
+double kd = .2;
 
 double dt, currentTime, previousTime;
 
-
+//filter
+ExponentialFilter < long > ADCFilter(70, 0);
+double filteredZ = 0;
+//filter2
+ExponentialFilter < long > ADCFilterY(70, 0);
+double filteredY = 0;
 
 //pinouts for Aurora R1
 const int servo_x = 5;
@@ -59,12 +65,10 @@ const int ledPinB = 9;
 const int buzzer = 10;
 const int pyro1 = 11;
 
-
 void setup() {
   Serial.begin(9600);
   delay(200);
   bno.setExtCrystalUse(true);
-
 
   // Servo
   servoY.attach(5);
@@ -72,23 +76,21 @@ void setup() {
   servoY.write(servoY_offset);
   servoZ.write(servoZ_offset);
 
-
   pinMode(buzzer, OUTPUT);
   pinMode(pyro1, OUTPUT);
-
 
   tone(buzzer, 200, 200);
   delay(300);
   tone(buzzer, 800, 200);
   delay(300);
   tone(buzzer, 500, 200);
-  digitalWrite(ledPinG, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(300);                       // wait for a second
-  digitalWrite(ledPinG, LOW);    // turn the LED off by making the voltage LOW
+  digitalWrite(ledPinG, HIGH); // turn the LED on (HIGH is the voltage level)
+  delay(300); // wait for a second
+  digitalWrite(ledPinG, LOW); // turn the LED off by making the voltage LOW
   delay(500);
-  digitalWrite(ledPinG, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(300);                       // wait for a second
-  digitalWrite(ledPinG, LOW);    // turn the LED off by making the voltage LOW
+  digitalWrite(ledPinG, HIGH); // turn the LED on (HIGH is the voltage level)
+  delay(300); // wait for a second
+  digitalWrite(ledPinG, LOW); // turn the LED off by making the voltage LOW
   delay(500);
 
   if (!SD.begin(4)) {
@@ -104,32 +106,30 @@ void setup() {
   myFile = SD.open("flight.csv", FILE_WRITE);
 
   if (myFile) {
-    myFile.println("time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, servoOutY, servoOutZ");
+    myFile.println("time,flighttime(dt), verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, servoOutY, servoOutZ");
   }
 
   if (!bno.begin()) {
     while (1);
   }
 
-
-/*
-  if (!bmp.begin_I2C()) {
-    while (1);
-  }
-  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_15);
-  baseAlt = bmp.readAltitude(SEALEVELPRESSURE_HPA) * 3.281;
-*/
+  /*
+    if (!bmp.begin_I2C()) {
+      while (1);
+    }
+    bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_15);
+    baseAlt = bmp.readAltitude(SEALEVELPRESSURE_HPA) * 3.281;
+  */
 }
-
 
 void loop() {
   // Read gyro sensor data
   if (state == 0) {
-    imu::Vector<3> li_ac = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
-    digitalWrite(ledPinR, HIGH);   // turn the LED on (HIGH is the voltage level)
-    if (li_ac.z() > threshold ) {
+    imu::Vector < 3 > li_ac = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+    digitalWrite(ledPinR, HIGH); // turn the LED on (HIGH is the voltage level)
+    if (li_ac.z() > threshold) {
       Serial.print(li_ac.z());
-      state++ ;
+      state++;
     }
 
   }
@@ -140,14 +140,13 @@ void loop() {
     currentTime = millis();
     dt = (currentTime - previousTime) / 1000;
 
-
     //LED
-    digitalWrite(ledPinR, LOW);   // turn the LED on (HIGH is the voltage level)
-    digitalWrite(ledPinB, HIGH);   // turn the LED on (HIGH is the voltage level)
+    digitalWrite(ledPinR, LOW); // turn the LED on (HIGH is the voltage level)
+    digitalWrite(ledPinB, HIGH); // turn the LED on (HIGH is the voltage level)
 
     //IMU DATA
-    imu::Vector<3> li_ac = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
-    imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
+    imu::Vector < 3 > li_ac = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+    imu::Vector < 3 > euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
 
     double degreeY = euler.z();
     double degreeZ = euler.y();
@@ -171,15 +170,27 @@ void loop() {
     PIDZ = -1 * (pidZ_p + pidZ_d);
     PIDY = -1 * (pidY_p + pidY_d);
 
+    //Apply filter
+    double RawValue = PIDZ;
+    ADCFilter.Filter(RawValue);
+    filteredZ = ADCFilter.Current();
+
+    //Apply filter
+    double RawValueY = PIDY;
+    ADCFilterY.Filter(RawValueY);
+    filteredY = ADCFilterY.Current();
+
     /////////////////////////////////////////////////////////////////////////////////////////////////SERVO
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    servoY.write((PIDY * 1) + servoY_offset);
-    servoZ.write((PIDZ * 1) + servoZ_offset);
+    servoY.write((filteredY / 3) + servoY_offset);
+    servoZ.write((filteredZ / 3) + servoZ_offset);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////DATA AND STATE
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //datalogging - time, verticalAccel, rawDegreeY, rawDegreeZ, pidY, pidZ, filteredPIdY, filteredPidZ, servoOutY, servoOutZ
-    myFile.print(currentTime / 100);
+    myFile.print(currentTime);
+    myFile.print(",");
+    myFile.print(dt);
     myFile.print(",");
     //myFile.print((bmp.readAltitude(SEALEVELPRESSURE_HPA) * 3.281) - baseAlt);
     //myFile.print(",");
@@ -197,20 +208,18 @@ void loop() {
     myFile.print(",");
     myFile.println((-1) * (servoZ.read() - servoZ_offset));
 
+    previousTime = currentTime;
 
-    previousTime = currentTime;  
-
-
-    if (li_ac.z() < -5 ) {
+    if (li_ac.z() < -5) {
       state++;
     }
   }
 
   if (state == 2) {
-    digitalWrite(ledPinB, LOW);   // turn the LED on (HIGH is the voltage level)
+    digitalWrite(ledPinB, LOW); // turn the LED on (HIGH is the voltage level)
     digitalWrite(ledPinG, HIGH);
     myFile.close();
-    state++ ;
+    state++;
   }
 
   if (state == 3) {

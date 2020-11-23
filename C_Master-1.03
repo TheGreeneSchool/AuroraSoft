@@ -5,7 +5,7 @@ Known issues:
 - Would like to remove the servo "gear ratio" value and ONLY control rocket w/ PID
 - Arduino Euler angle lib WONT work for highher flights - Switch to quats from camerons BNO055 lib 
 - Would like to have a way to more cleanly switch states
-
+- At some point re-evaluate adding back I value (currently a PD controller)
 
 States: 
 - Startup --> Startup Function

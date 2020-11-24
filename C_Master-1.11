@@ -1,10 +1,13 @@
-/*Alto: Aurora ------ Master test 1.03 -- Teddy Duncker: TTB Aerospace, With Code from: Cole Purtzer: Delta Space Systems
+/*Alto: Aurora ------ Master test 1.11 -- Teddy Duncker: TTB Aerospace, With Code from: Cole Purtzer: Delta Space Systems
 
   Known issues:
   - Adding in BMP reading through adafruit lib exceeds arduino mem, add diff LIB
-  - Would like to remove the servo "gear ratio" value and ONLY control rocket w/ PID
   - Arduino Euler angle lib WONT work for highher flights - Switch to quats from camerons BNO055 lib
   - Would like to have a way to more cleanly switch states
+
+  Wants
+  - ReDo the TVC angle: servo angle test
+  - New Servos on TVC mount
 
 
   States:
@@ -14,7 +17,7 @@
   - freefall --> deploy chutes, close data
   - Program terminated --> continuously spam "program terminated" and wait for shutoff
 
-  ///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/22 -----------------------//////////*/
+  ///////////////////////////////////////---------------- VERSION FOR TF-3 - 11/24-----------------------//////////*/
 
 #include <Wire.h>
 #include <Arduino.h>
@@ -39,8 +42,8 @@ int threshold = 11;
 //float baseAlt;
 
 // Set servo start value
-const int servoY_offset = 69;
-const int servoZ_offset = 124;
+const int servoY_offset = 60;
+const int servoZ_offset = 96;
 Servo servoY;
 Servo servoZ;
 
@@ -65,8 +68,8 @@ float pidY_d = 0;
 
 //PID Gains
 double kp = 0.08;
-double ki = 0.03;
-double kd = 0.035;
+double ki = 0.005;
+double kd = 0.025;
 
 float gearRatioZ = 5;
 float gearRatioY = 5;
@@ -225,8 +228,9 @@ void loop() {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////SERVO
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    servoY.write(cPwmY);
     servoZ.write(cPwmZ);
+    servoY.write(cPwmY);
+
 
     /////////////////////////////////////////////////////////////////////////////////////////////////DATA AND STATE
     /////////////////////////////////////////////////////////////////////////////////////////////////
